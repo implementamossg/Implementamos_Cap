@@ -5,7 +5,7 @@
  */
 
 // URL de la Aplicación Web de Google Apps Script (Reemplazar con la URL publicada)
-const API_URL = "https://script.google.com/macros/s/AKfycbwPVX2OySvxCba72BvX99PIlO_BjipUxXEP982wSCKfaBXOtYPxTflYVjD4WnRthrFq/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx4nYRIp6PpW_3bWJs1Fo-jd67hjtuowLdf8aFVoxsok1pPHiCEabZ7jZ5zhTzNztqhng/exec";
 
 // ESTADO GLOBAL DE LA APLICACIÓN
 const state = {
