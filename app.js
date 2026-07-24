@@ -5,7 +5,7 @@
  */
 
 // URL de la Aplicación Web de Google Apps Script (Reemplazar con la URL publicada)
-const API_URL = "https://script.google.com/macros/s/AKfycbx4nYRIp6PpW_3bWJs1Fo-jd67hjtuowLdf8aFVoxsok1pPHiCEabZ7jZ5zhTzNztqhng/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwPVX2OySvxCba72BvX99PIlO_BjipUxXEP982wSCKfaBXOtYPxTflYVjD4WnRthrFq/exec";
 
 // ESTADO GLOBAL DE LA APLICACIÓN
 const state = {
@@ -37,9 +37,6 @@ function bindEvents() {
 
   // Logout Button
   document.getElementById("btn-logout").addEventListener("click", handleLogout);
-
-  // Video Navigation Back Button
-  document.getElementById("btn-video-back").addEventListener("click", () => switchView("view-dashboard"));
 
   // Start Evaluation Button
   document.getElementById("btn-start-evaluation").addEventListener("click", startEvaluationView);
@@ -316,6 +313,10 @@ function initVideoPlayer(module) {
   document.getElementById("video-module-title").textContent = module.nombre_modulo;
   document.getElementById("video-module-desc").textContent = module.descripcion;
 
+  // Asegurar que el contenedor del video esté visible
+  const videoWrapper = document.querySelector(".video-wrapper");
+  if (videoWrapper) videoWrapper.style.display = "block";
+
   const btnStartEval = document.getElementById("btn-start-evaluation");
   btnStartEval.disabled = true;
   
@@ -342,7 +343,9 @@ function initVideoPlayer(module) {
       disablekb: 1,         // Deshabilitar atajos de teclado (adelantar con flechas)
       modestbranding: 1,
       rel: 0,
-      fs: 0
+      fs: 0,
+      iv_load_policy: 3,
+      playsinline: 1
     },
     events: {
       onStateChange: onPlayerStateChange
@@ -350,12 +353,46 @@ function initVideoPlayer(module) {
   });
 }
 
+// Bloquear atajos de teclado (Barra espaciadora / Tecla K) que puedan pausar el video
+window.addEventListener("keydown", (e) => {
+  const videoSection = document.getElementById("view-video");
+  if (videoSection && videoSection.classList.contains("active") && !state.videoEnded) {
+    if ([" ", "Spacebar", "k", "K", "MediaPlayPause"].includes(e.key) || e.code === "Space") {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+}, true);
+
+// Reanudar inmediatamente si la pestaña recupera el foco
+document.addEventListener("visibilitychange", () => {
+  const videoSection = document.getElementById("view-video");
+  if (videoSection && videoSection.classList.contains("active") && !state.videoEnded) {
+    if (state.ytPlayer && typeof state.ytPlayer.playVideo === "function") {
+      state.ytPlayer.playVideo();
+    }
+  }
+});
+
 // Evento YouTube Player State Change
 function onPlayerStateChange(event) {
+  // REGLA DE NEGOCIO: Si el video se pausa por cualquier motivo antes de finalizar, forzar reproducción de inmediato
+  if (event.data === YT.PlayerState.PAUSED && !state.videoEnded) {
+    if (state.ytPlayer && typeof state.ytPlayer.playVideo === "function") {
+      state.ytPlayer.playVideo();
+    }
+  }
+
   // YT.PlayerState.ENDED === 0
   if (event.data === YT.PlayerState.ENDED) {
     state.videoEnded = true;
     
+    // REGLA DE NEGOCIO: Ocultar el video completamente al finalizar para evitar volver a reproducirlo o interactuar con el player
+    const videoWrapper = document.querySelector(".video-wrapper");
+    if (videoWrapper) {
+      videoWrapper.style.display = "none";
+    }
+
     // Habilitar botón de evaluación
     const btnStartEval = document.getElementById("btn-start-evaluation");
     btnStartEval.disabled = false;
@@ -363,8 +400,8 @@ function onPlayerStateChange(event) {
     // Actualizar estilo del banner informativo
     const bannerStatus = document.getElementById("video-banner-status");
     bannerStatus.classList.add("unlocked");
-    document.getElementById("video-status-title").textContent = "¡Video finalizado exitosamente!";
-    document.getElementById("video-status-text").textContent = "Ya puede proceder a realizar la evaluación del módulo.";
+    document.getElementById("video-status-title").textContent = "¡Capacitación Finalizada Exitosamente!";
+    document.getElementById("video-status-text").textContent = "El video ha sido completado y retirado. Haga clic en Iniciar Evaluación para continuar.";
   }
 }
 
@@ -402,7 +439,8 @@ async function startEvaluationView() {
     state.questions = res.data;
     renderCurrentQuestion();
   } else {
-    alert("No se pudieron cargar las preguntas del módulo.");
+    const errorMsg = (res && res.message) ? res.message : `No se encontraron preguntas en la pestaña 'Base_Preguntas' de Google Sheets para el ID_Modulo: "${state.activeModule.id_modulo}".`;
+    alert(`⚠️ ATENCIÓN: No fue posible cargar la evaluación.\n\nDetalle: ${errorMsg}\n\nPor favor revise en Google Sheets que la pestaña 'Base_Preguntas' contenga los registros para el ID_Modulo: "${state.activeModule.id_modulo}".`);
     switchView("view-dashboard");
   }
 }
