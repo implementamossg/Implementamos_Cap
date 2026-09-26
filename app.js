@@ -584,7 +584,7 @@ function showResultModal(score, minScore, isApproved) {
     icon.textContent = "✕";
     title.textContent = "Evaluación No Aprobada";
     scoreDisplay.style.color = "var(--danger)";
-    detail.textContent = `Tu nota (${score}%) no alcanzó el mínimo requerido (${minScore}%). Puedes intentar nuevamente este módulo.`;
+    detail.textContent = `Tu nota (${score}%) no alcanzó el mínimo requerido (${minScore}%). Contacta al administrador.`;
   }
 
   modal.classList.add("active");
